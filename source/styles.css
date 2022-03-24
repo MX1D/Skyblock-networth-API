@@ -1,0 +1,24 @@
+body, html {
+  height: 100%;
+}
+
+body {
+ position: relative;
+     -webkit-background-size: cover;
+    -moz-background-size: cover;
+    -o-background-size: cover;
+    background-size: cover;
+    height: 100%;
+    overflow: hidden;
+    background-image: url("https://cdn.glitch.com/58e8c3c6-ee93-47e4-9d31-6c262b25bc02%2F2021-06-11_17.09.26.png?v=1623445946890https://cdn.glitch.com/58e8c3c6-ee93-47e4-9d31-6c262b25bc02%2F2021-06-11_17.09.26.png?v=1623445946890")
+    }
+
+.contents {
+  color: white;
+  text-align: center;
+  font-family: simvoni;
+}
+#result {
+  font-size: 12px;
+    
+}

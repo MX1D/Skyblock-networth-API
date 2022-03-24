@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>MX1D's Networth Calculator</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <div class="contents">
+      <h1>MX1D's Networth Calculator</h1>
+        <p>
+        Including enchantments, hot and fuming potato books, recombobulators, dungeon essence
+        (wither 4k each), reforges, pet items, and pet skins
+      </p>
+      <p>
+        The main api end point is
+        <a href="https://skyblocknetworth.tk/api/player/networth?minecraft_ign=USERNAME&hypixel_api_key=YOUR_KEY">https://skyblocknetworth.tk/api/player/networth?minecraft_ign=USERNAME&hypixel_api_key=YOUR_KEY</a>
+      </p>
+
+      <!-- <label for="hypixel_api_key">Hypixel API Key</label> -->
+
+      <!-- <input type="password" id="hypixel_api_key" autocomplete="on" /> -->
+      <label for="minecraft_ign">Minecraft IGN</label>
+      <input type="text" id="minecraft_ign" autocomplete="on" />
+      <input type="submit" id="calculate_btn" value="Calculate" />
+      <p id="error_message"></p>
+
+      <div id="result">
+        <p id="networth_title"></p>
+        <p id="networth_total"></p>
+        <ul id="networths"></ul>
+      </div>
+    </div>
+  </body>
+
+  <script>
+    function formattedColourCodes(string) {
+      if (string == undefined) return "";
+      if (string == null) return "";
+      if (string.includes("§") == false) return string;
+
+      var colours = {
+        "§0": "#000000",
+        "§1": "#0000AA",
+        "§2": "#00AA00",
+        "§3": "#00AAAA",
+        "§4": "#AA0000",
+        "§5": "#AA00AA",
+        "§6": "#FFAA00",
+        "§7": "#AAAAAA",
+        "§8": "#555555",
+        "§9": "#5555FF",
+        "§a": "#55FF55",
+        "§b": "#55FFFF",
+        "§c": "#FF5555",
+        "§d": "#FF55FF",
+        "§e": "#FFFF55",
+        "§f": "#FFFFFF"
+      };
+
+      var result = [];
+      var stringList = string.split("§");
+      stringList.forEach(element => {
+        var colourCode = `§${element.charAt(0)}`;
+
+        if (colourCode in colours)
+          result.push(
+            `<span style="color:${colours[colourCode]}">${element.substring(
+              1
+            )}</span>`
+          );
+        else result.push(element.substring(1));
+      });
+
+      return result.join("");
+    }
+
+    function formattedColourRarity(string, rarity) {
+      var colourRarity = {
+        COMMON: "#FFFFFF",
+        UNCOMMON: "#55FF55",
+        RARE: "#5555FF",
+        EPIC: "#AA00AA",
+        LEGENDARY: "#FFAA00",
+        MYTHIC: "	#FF55FF"
+      };
+
+      if (rarity in colourRarity)
+        return `<span style="color:${colourRarity[rarity]}">${string}</span>`;
+      return string;
+    }
+
+    function formattedCurrency(n) {
+      if (n == undefined) return "";
+      if (n == null) return "";
+
+      return n.toLocaleString("en-US", {
+        style: "currency",
+        currency: "USD"
+      });
+    }
+
+    function clearCurrentResult() {
+      $("#result #networth_title").empty();
+      $("#result #networth_total").empty();
+      $("#result #networths").empty();
+    }
+
+    function titleCase(str) {
+      str = str.toLowerCase().split(" ");
+      for (var i = 0; i < str.length; i++) {
+        str[i] = str[i].charAt(0).toUpperCase() + str[i].slice(1);
+      }
+      return str.join(" ");
+    }
+
+    $(document).ready(function() {
+      $("#calculate_btn").click(function() {
+        var hypixelAPIKey = "32af964f-ce63-406a-907c-27833f20bbb9"
+        var minecraftIGN = $("#minecraft_ign").val();
+
+        clearCurrentResult();
+
+        $("#error_message").empty();
+        if (minecraftIGN == "") {
+          $("#error_message").text(
+            "Minecraft IGN can't be empty"
+          );
+          return;
+        }
+
+        $("#error_message").text("Calculating...");
+        $.ajax({
+          dataType: "json",
+          url: `/api/player/networth?minecraft_ign=${minecraftIGN}&hypixel_api_key=${hypixelAPIKey}`,
+          success: function(data) {
+            if (data.success == false) {
+              $("#error_message").text(data.cause);
+              return;
+            }
+
+            $("#result #networth_title").text(
+              `${data.data.name}'s ${data.data.profile_name} Profile`
+            );
+            $("#result #networth_total").text(
+              `Total: ${formattedCurrency(data.data.networth.total)}`
+            );
+
+            var items = [];
+
+            items.push(
+              `<li>Coins: ${formattedCurrency(data.data.networth.coins)}`
+            );
+            items.push(
+              ` (${(
+                (data.data.networth.coins / data.data.networth.total) *
+                100
+              ).toFixed(2)}%)</li>`
+            );
+
+            var armoursItems = [];
+            for (key in data.data.networth.armours.armours) {
+              var armourName = formattedColourCodes(
+                data.data.networth.armours.armours[key].name
+              );
+              if (data.data.networth.armours.armours[key].skin != null)
+                armoursName += ` (${titleCase(
+                  data.data.networth.armours.armours[key].skin.replaceAll(
+                    "_",
+                    " "
+                  )
+                )})`;
+
+              armoursItems.push(`<li>${armourName} - 
+            ${formattedCurrency(
+              data.data.networth.armours.armours[key].price
+            )}</li>`);
+            }
+            if (armoursItems.length != 0) {
+              items.push(
+                `<li>Armours: ${formattedCurrency(
+                  data.data.networth.armours.total
+                )}`
+              );
+              items.push(
+                ` (${(
+                  (data.data.networth.armours.total /
+                    data.data.networth.total) *
+                  100
+                ).toFixed(2)}%)`
+              );
+              items.push(`</li><ul>${armoursItems.join("")}</ul>`);
+            }
+
+            var inventoryItems = [];
+            var inventoryNetworths = data.data.networth.inventory.items.sort(
+              (b, a) => a.price - b.price
+            );
+            var counter = 0;
+            for (var key in inventoryNetworths) {
+              if (counter == 5) break;
+
+              inventoryItems.push(
+                `<li>${formattedColourCodes(
+                  inventoryNetworths[key].name
+                )} - ${formattedCurrency(inventoryNetworths[key].price)}</li>`
+              );
+              counter += 1;
+            }
+            if (inventoryNetworths.length > 5)
+              inventoryNetworths.push("<li>...</li>");
+            if (inventoryItems.length != 0) {
+              items.push(
+                `<li>Inventory: ${formattedCurrency(
+                  data.data.networth.inventory.total
+                )}`
+              );
+              items.push(
+                ` (${(
+                  (data.data.networth.inventory.total /
+                    data.data.networth.total) *
+                  100
+                ).toFixed(2)}%)`
+              );
+              items.push(`</li><ul>${inventoryItems.join("")}</ul>`);
+            }
+
+            petsItems = [];
+            var petsNetworth = data.data.networth.pets.pets.sort(
+              (b, a) => a.price - b.price
+            );
+            counter = 0;
+            for (key in petsNetworth) {
+              if (counter == 5) break;
+              var petName = formattedColourRarity(
+                titleCase(petsNetworth[key].name.replaceAll("_", " ")),
+                petsNetworth[key].rarity
+              );
+              if (petsNetworth[key]["skin"] != null)
+                petName += ` (${titleCase(
+                  petsNetworth[key].skin.replaceAll("_", " ")
+                )})`;
+
+              petsItems.push(
+                `<li>${petName} - ${formattedCurrency(
+                  petsNetworth[key].price
+                )}</li>`
+              );
+
+              counter += 1;
+            }
+            if (petsNetworth.length > 5) petsItems.push("<li>...</li>");
+            if (petsItems.length != 0) {
+              items.push(
+                `<li>Pets: ${formattedCurrency(data.data.networth.pets.total)}`
+              );
+              items.push(
+                ` (${(
+                  (data.data.networth.pets.total / data.data.networth.total) *
+                  100
+                ).toFixed(2)}%)`
+              );
+              items.push(`</li><ul>${petsItems.join("")}</ul>`);
+            }
+
+            armoursItems = [];
+            var wardrobeNetworths = data.data.networth.wardrobe.armours.sort(
+              (b, a) => a.price - b.price
+            );
+            counter = 0;
+            for (var key in wardrobeNetworths) {
+              if (counter == 5) break;
+
+              var armourName = formattedColourCodes(
+                wardrobeNetworths[key].name
+              );
+              if (wardrobeNetworths[key].skin != null)
+                armourName += ` (${titleCase(
+                  wardrobeNetworths[key].skin.replaceAll("_", " ")
+                )})`;
+              armoursItems.push(
+                `<li>${armourName} - ${formattedCurrency(
+                  wardrobeNetworths[key].price
+                )}</li>`
+              );
+              counter += 1;
+            }
+            if (wardrobeNetworths.length > 5) armoursItems.push("<li>...</li>");
+            if (armoursItems.length != 0) {
+              items.push(
+                `<li>Wardrobe: ${formattedCurrency(
+                  data.data.networth.wardrobe.total
+                )}`
+              );
+              items.push(
+                ` (${(
+                  (data.data.networth.wardrobe.total /
+                    data.data.networth.total) *
+                  100
+                ).toFixed(2)}%)`
+              );
+              items.push(`</li><ul>${armoursItems.join("")}</ul>`);
+            }
+
+            var accessoryItems = [];
+            var accessoryNetworths = data.data.networth.accessory.talismans.sort(
+              (b, a) => a.price - b.price
+            );
+            counter = 0;
+            for (var key in accessoryNetworths) {
+              if (counter == 5) break;
+
+              accessoryItems.push(
+                `<li>${formattedColourCodes(
+                  accessoryNetworths[key].name
+                )} - ${formattedCurrency(accessoryNetworths[key].price)}</li>`
+              );
+              counter += 1;
+            }
+            if (accessoryNetworths.length > 5)
+              accessoryItems.push("<li>...</li>");
+            if (accessoryItems.length != 0) {
+              items.push(
+                `<li>Accessory: ${formattedCurrency(
+                  data.data.networth.accessory.total
+                )}`
+              );
+              items.push(
+                ` (${(
+                  (data.data.networth.accessory.total /
+                    data.data.networth.total) *
+                  100
+                ).toFixed(2)}%)`
+              );
+              items.push(`</li><ul>${accessoryItems.join("")}</ul>`);
+            }
+
+            var enderchestItems = [];
+            var enderchestNetworths = data.data.networth.enderchest.items.sort(
+              (b, a) => a.price - b.price
+            );
+            counter = 0;
+            for (var key in enderchestNetworths) {
+              if (counter == 5) break;
+
+              enderchestItems.push(
+                `<li>${formattedColourCodes(
+                  enderchestNetworths[key].name
+                )} - ${formattedCurrency(enderchestNetworths[key].price)}</li>`
+              );
+              counter += 1;
+            }
+            if (enderchestNetworths.length > 5)
+              enderchestItems.push("<li>...</li>");
+            if (enderchestItems.length != 0) {
+              items.push(
+                `<li>Enderchest: ${formattedCurrency(
+                  data.data.networth.enderchest.total
+                )}`
+              );
+              items.push(
+                ` (${(
+                  (data.data.networth.enderchest.total /
+                    data.data.networth.total) *
+                  100
+                ).toFixed(2)}%)`
+              );
+              items.push(`</li><ul>${enderchestItems.join("")}</ul>`);
+            }
+
+            var backpackItems = [];
+            var backpackNetworths = data.data.networth.backpack.items.sort(
+              (b, a) => a.price - b.price
+            );
+            counter = 0;
+            for (var key in backpackNetworths) {
+              if (counter == 5) break;
+
+              backpackItems.push(
+                `<li>${formattedColourCodes(
+                  backpackNetworths[key].name
+                )} - ${formattedCurrency(backpackNetworths[key].price)}</li>`
+              );
+              counter += 1;
+            }
+            if (backpackNetworths.length > 5)
+              backpackItems.push("<li>...</li>");
+            if (backpackItems.length != 0) {
+              items.push(
+                `<li>Backpacks: ${formattedCurrency(
+                  data.data.networth.backpack.total
+                )}`
+              );
+              items.push(
+                ` (${(
+                  (data.data.networth.backpack.total /
+                    data.data.networth.total) *
+                  100
+                ).toFixed(2)}%)`
+              );
+              items.push(`</li><ul>${backpackItems.join("")}</ul>`);
+            }
+
+            var vaultItems = [];
+            var vaultNetworths = data.data.networth.vault.items.sort(
+              (b, a) => a.price - b.price
+            );
+            var counter = 0;
+            for (var key in vaultNetworths) {
+              if (counter == 5) break;
+
+              vaultItems.push(
+                `<li>${formattedColourCodes(
+                  vaultNetworths[key].name
+                )} - ${formattedCurrency(vaultNetworths[key].price)}</li>`
+              );
+              counter += 1;
+            }
+            if (vaultNetworths.length > 5) vaultNetworths.push("<li>...</li>");
+            if (vaultItems.length != 0) {
+              items.push(
+                `<li>Vault: ${formattedCurrency(
+                  data.data.networth.vault.total
+                )}`
+              );
+              items.push(
+                ` (${(
+                  (data.data.networth.vault.total / data.data.networth.total) *
+                  100
+                ).toFixed(2)}%)`
+              );
+              items.push(`</li><ul>${vaultItems.join("")}</ul>`);
+            }
+
+            console.log(data.data);
+            $("#result #networths").append(items.join(""));
+            $("#error_message").empty();
+          },
+          error: function() {
+            $("#error_message").text(
+              "There is problem talking to internal API!"
+            );
+          }
+        });
+      });
+    });
+  </script>
+</html>
